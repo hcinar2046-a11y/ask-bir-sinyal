@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="AŞK BİR SİNYAL - Sevdiğine tek dokunuşla hislerini gönder. Çiftler için özel iletişim uygulaması.">
+    <meta name="theme-color" content="#1a1025">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Aşk Sinyal">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <title>AŞK BİR SİNYAL - Sevgilimi Özledim</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Toast Notification -->
+    <div id="toast" class="toast" aria-live="polite"></div>
+
+    <!-- Incoming Signal Overlay -->
+    <div id="incoming-signal-overlay" class="incoming-signal-overlay hidden">
+        <div class="incoming-signal-card">
+            <div class="incoming-signal-pulse"></div>
+            <div class="incoming-signal-emoji" id="incoming-emoji"></div>
+            <p class="incoming-signal-sender" id="incoming-sender"></p>
+            <p class="incoming-signal-text" id="incoming-text"></p>
+            <button class="btn-dismiss" id="btn-dismiss-signal" onclick="dismissIncomingSignal()">Tamam ❤️</button>
+        </div>
+    </div>
+
+    <!-- ========== SCREEN 1: WELCOME ========== -->
+    <div id="screen-welcome" class="screen active">
+        <div class="welcome-container">
+            <div class="welcome-logo-area">
+                <div class="heart-animation">
+                    <span class="heart-icon">💕</span>
+                </div>
+                <h1 class="app-title">Sevgilimi<br><span class="title-accent">Özledim</span></h1>
+                <p class="app-subtitle">Sevdiğine tek dokunuşla<br>hislerini gönder.</p>
+            </div>
+            <div class="welcome-brand">
+                <span class="brand-tag">AŞK BİR SİNYAL</span>
+            </div>
+            <div class="welcome-actions">
+                <button class="btn btn-primary btn-large" id="btn-goto-login" onclick="showScreen('screen-login')">
+                    Giriş Yap
+                </button>
+                <button class="btn btn-secondary btn-large" id="btn-goto-register" onclick="showScreen('screen-register')">
+                    Kayıt Ol
+                </button>
+            </div>
+            <p class="welcome-footer">sadece ikinize özel 💜</p>
+        </div>
+    </div>
+
+    <!-- ========== SCREEN 2: REGISTER ========== -->
+    <div id="screen-register" class="screen">
+        <div class="form-container">
+            <button class="btn-back" id="btn-back-register" onclick="showScreen('screen-welcome')">← Geri</button>
+            <div class="form-header">
+                <span class="form-emoji">✨</span>
+                <h2>Kayıt Ol</h2>
+                <p>Aşk yolculuğuna başla</p>
+            </div>
+            <form id="form-register" onsubmit="handleRegister(event)">
+                <div class="input-group">
+                    <label for="reg-name">İsmin</label>
+                    <input type="text" id="reg-name" placeholder="Adını yaz..." required>
+                </div>
+                <div class="input-group">
+                    <label for="reg-email">E-posta</label>
+                    <input type="email" id="reg-email" placeholder="ornek@mail.com" required>
+                </div>
+                <div class="input-group">
+                    <label for="reg-password">Şifre</label>
+                    <input type="password" id="reg-password" placeholder="En az 6 karakter" required minlength="6">
+                </div>
+                <div class="input-group">
+                    <label for="reg-confirm">Şifre Tekrar</label>
+                    <input type="password" id="reg-confirm" placeholder="Şifreni tekrar yaz" required minlength="6">
+                </div>
+                <button type="submit" class="btn btn-primary btn-large btn-full" id="btn-register-submit">
+                    Hesap Oluştur 💕
+                </button>
+            </form>
+            <p class="form-note">
+                🔒 Bu uygulama sadece bağlı çiftler arasında özel iletişim içindir.
+            </p>
+            <p class="form-link">
+                Zaten hesabın var mı? <a href="#" onclick="showScreen('screen-login')">Giriş Yap</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- ========== SCREEN 3: LOGIN ========== -->
+    <div id="screen-login" class="screen">
+        <div class="form-container">
+            <button class="btn-back" id="btn-back-login" onclick="showScreen('screen-welcome')">← Geri</button>
+            <div class="form-header">
+                <span class="form-emoji">💖</span>
+                <h2>Giriş Yap</h2>
+                <p>Seni sevgiline bağlayalım</p>
+            </div>
+            <form id="form-login" onsubmit="handleLogin(event)">
+                <div class="input-group">
+                    <label for="login-email">E-posta</label>
+                    <input type="email" id="login-email" placeholder="ornek@mail.com" required>
+                </div>
+                <div class="input-group">
+                    <label for="login-password">Şifre</label>
+                    <input type="password" id="login-password" placeholder="Şifreni gir" required>
+                </div>
+                <button type="submit" class="btn btn-primary btn-large btn-full" id="btn-login-submit">
+                    Giriş Yap ❤️
+                </button>
+            </form>
+            <p class="form-link">
+                Hesabın yok mu? <a href="#" onclick="showScreen('screen-register')">Kayıt Ol</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- ========== SCREEN 4: PARTNER CONNECTION ========== -->
+    <div id="screen-connect" class="screen">
+        <div class="connect-container">
+            <div class="form-header">
+                <span class="form-emoji">🔗</span>
+                <h2>Eşleşme</h2>
+                <p>Sevgilinle bağlan</p>
+            </div>
+
+            <div class="connect-section">
+                <div class="connect-card your-code-card">
+                    <h3>Senin Bağlantı Kodun</h3>
+                    <div class="code-display">
+                        <span id="my-code" class="code-text">---</span>
+                        <button class="btn-copy" id="btn-copy-code" onclick="copyCode()">
+                            📋 Kopyala
+                        </button>
+                    </div>
+                    <p class="code-hint">Bu kodu sevgilinle paylaş</p>
+                </div>
+
+                <div class="connect-divider">
+                    <span>veya</span>
+                </div>
+
+                <div class="connect-card partner-code-card">
+                    <h3>Sevgilinin Kodunu Gir</h3>
+                    <div class="partner-input-area">
+                        <input type="text" id="partner-code-input" placeholder="Kodu buraya yapıştır..." maxlength="8">
+                        <button class="btn btn-primary btn-connect" id="btn-connect-partner" onclick="connectPartner()">
+                            Bağlan 💕
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn-logout-small" id="btn-logout-connect" onclick="handleLogout()">Çıkış Yap</button>
+        </div>
+    </div>
+
+    <!-- ========== SCREEN 5: MAIN APP ========== -->
+    <div id="screen-main" class="screen">
+        <div class="main-container">
+            <!-- Top Header -->
+            <div class="main-header">
+                <div class="header-left">
+                    <span class="app-name-small">AŞK BİR SİNYAL</span>
+                </div>
+                <div class="header-right">
+                    <button class="icon-btn" id="btn-goto-location" onclick="showScreen('screen-location')" title="Konum">
+                        📍
+                    </button>
+                    <button class="icon-btn" id="btn-goto-notifications" onclick="showScreen('screen-notifications')" title="Bildirimler">
+                        🔔
+                        <span class="notif-badge hidden" id="notif-badge">0</span>
+                    </button>
+                    <button class="icon-btn" id="btn-goto-settings" onclick="showScreen('screen-settings')" title="Ayarlar">
+                        ⚙️
+                    </button>
+                </div>
+            </div>
+
+            <!-- Connection Status -->
+            <div class="connection-status" id="connection-status-bar">
+                <span class="status-dot connected"></span>
+                <span>Bağlı · <strong id="partner-name-display">Sevgilin</strong></span>
+            </div>
+
+            <!-- Daily Message Card -->
+            <div class="daily-message-card" id="daily-message-card">
+                <span class="daily-label">✨ Bugünün Mesajı</span>
+                <p class="daily-text" id="daily-text">"Seni düşünmeden geçen bir anım yok."</p>
+            </div>
+
+            <!-- Prompt -->
+            <p class="main-prompt">Bugün ona ne hissettiğini gönder.</p>
+
+            <!-- Signal Buttons -->
+            <div class="signal-buttons">
+                <button class="signal-btn signal-miss" id="btn-signal-miss" onclick="sendSignal('miss')">
+                    <span class="signal-emoji">❤️</span>
+                    <div class="signal-info">
+                        <span class="signal-title">Seni Özledim</span>
+                        <span class="signal-sub">kalbim seninle</span>
+                    </div>
+                </button>
+
+                <button class="signal-btn signal-love" id="btn-signal-love" onclick="sendSignal('love')">
+                    <span class="signal-emoji">💋</span>
+                    <div class="signal-info">
+                        <span class="signal-title">Seni Seviyorum</span>
+                        <span class="signal-sub">tüm kalbimle</span>
+                    </div>
+                </button>
+
+                <button class="signal-btn signal-hurt" id="btn-signal-hurt" onclick="sendSignal('hurt')">
+                    <span class="signal-emoji">😔</span>
+                    <div class="signal-info">
+                        <span class="signal-title">Kırgınım</span>
+                        <span class="signal-sub">konuşmamız lazım</span>
+                    </div>
+                </button>
+
+                <button class="signal-btn signal-angry" id="btn-signal-angry" onclick="sendSignal('angry')">
+                    <span class="signal-emoji">😡</span>
+                    <div class="signal-info">
+                        <span class="signal-title">Kızgınım</span>
+                        <span class="signal-sub">seninle konuşmam lazım</span>
+                    </div>
+                </button>
+
+                <button class="signal-btn signal-call" id="btn-signal-call" onclick="sendSignal('call')">
+                    <span class="signal-emoji">📞</span>
+                    <div class="signal-info">
+                        <span class="signal-title">Müsaitsen Ara</span>
+                        <span class="signal-sub">sesini duymak istiyorum</span>
+                    </div>
+                </button>
+
+                <button class="signal-btn signal-sleep" id="btn-signal-sleep" onclick="sendSignal('sleep')">
+                    <span class="signal-emoji">😴</span>
+                    <div class="signal-info">
+                        <span class="signal-title">Uyuyorum</span>
+                        <span class="signal-sub">iyi geceler sevgilim</span>
+                    </div>
+                </button>
+
+                <button class="signal-btn signal-urgent" id="btn-signal-urgent" onclick="sendSignal('urgent')">
+                    <span class="signal-emoji">🚨</span>
+                    <div class="signal-info">
+                        <span class="signal-title">Acil Bana Yaz</span>
+                        <span class="signal-sub">lütfen hemen yaz</span>
+                    </div>
+                </button>
+
+                <button class="signal-btn signal-hug" id="btn-signal-hug" onclick="sendSignal('hug')">
+                    <span class="signal-emoji">🤗</span>
+                    <div class="signal-info">
+                        <span class="signal-title">Sarıl Bana</span>
+                        <span class="signal-sub">sanal bir sarılma</span>
+                    </div>
+                </button>
+
+                <button class="signal-btn signal-happy" id="btn-signal-happy" onclick="sendSignal('happy')">
+                    <span class="signal-emoji">😊</span>
+                    <div class="signal-info">
+                        <span class="signal-title">Mutluyum</span>
+                        <span class="signal-sub">mutluluğumu paylaşıyorum</span>
+                    </div>
+                </button>
+
+                <button class="signal-btn signal-meet" id="btn-signal-meet" onclick="sendSignal('meet')">
+                    <span class="signal-emoji">🫂</span>
+                    <div class="signal-info">
+                        <span class="signal-title">Buluşalım</span>
+                        <span class="signal-sub">seni görmek istiyorum</span>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SCREEN 6: NOTIFICATIONS ========== -->
+    <div id="screen-notifications" class="screen">
+        <div class="notif-container">
+            <div class="screen-header">
+                <button class="btn-back" id="btn-back-notifications" onclick="showScreen('screen-main')">← Geri</button>
+                <h2>Gelen Sinyaller</h2>
+                <p>Sevgilinden gelen hisler</p>
+            </div>
+            <div class="notif-list" id="notif-list">
+                <!-- Notifications will be rendered here -->
+                <div class="notif-empty" id="notif-empty">
+                    <span>💌</span>
+                    <p>Henüz sinyal yok</p>
+                    <p class="notif-empty-sub">İlk sinyali sen gönder!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SCREEN 7: SETTINGS ========== -->
+    <div id="screen-settings" class="screen">
+        <div class="settings-container">
+            <div class="screen-header">
+                <button class="btn-back" id="btn-back-settings" onclick="showScreen('screen-main')">← Geri</button>
+                <h2>Ayarlar</h2>
+                <p>Profilini ve tercihlerini düzenle</p>
+            </div>
+
+            <div class="settings-sections">
+                <!-- Profile Section -->
+                <div class="settings-card">
+                    <h3>👤 Profil</h3>
+                    <div class="settings-item">
+                        <span class="settings-label">İsim</span>
+                        <span class="settings-value" id="settings-name">—</span>
+                    </div>
+                    <div class="settings-item">
+                        <span class="settings-label">E-posta</span>
+                        <span class="settings-value" id="settings-email">—</span>
+                    </div>
+                </div>
+
+                <!-- Partner Section -->
+                <div class="settings-card">
+                    <h3>💕 Eşleşme</h3>
+                    <div class="settings-item">
+                        <span class="settings-label">Sevgilin</span>
+                        <span class="settings-value" id="settings-partner">Bağlı değil</span>
+                    </div>
+                    <div class="settings-item">
+                        <span class="settings-label">Durum</span>
+                        <span class="settings-value status-connected" id="settings-status">—</span>
+                    </div>
+                    <button class="btn btn-danger btn-small" id="btn-disconnect" onclick="disconnectPartner()">
+                        Bağlantıyı Kes
+                    </button>
+                </div>
+
+                <!-- Preferences Section -->
+                <div class="settings-card">
+                    <h3>⚙️ Tercihler</h3>
+                    <div class="settings-item toggle-item">
+                        <span class="settings-label">Bildirimler</span>
+                        <label class="toggle" for="toggle-notif">
+                            <input type="checkbox" id="toggle-notif" checked onchange="toggleSetting('notifications')">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-item toggle-item">
+                        <span class="settings-label">Titreşim</span>
+                        <label class="toggle" for="toggle-vibration">
+                            <input type="checkbox" id="toggle-vibration" checked onchange="toggleSetting('vibration')">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-item toggle-item">
+                        <span class="settings-label">Konum Paylaşımı</span>
+                        <label class="toggle" for="toggle-location">
+                            <input type="checkbox" id="toggle-location" checked onchange="toggleSetting('location')">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                    <div class="settings-item toggle-item">
+                        <span class="settings-label">Karanlık Mod</span>
+                        <label class="toggle" for="toggle-dark">
+                            <input type="checkbox" id="toggle-dark" onchange="toggleDarkMode()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Logout -->
+                <button class="btn btn-secondary btn-large btn-full" id="btn-logout-settings" onclick="handleLogout()">
+                    Çıkış Yap
+                </button>
+
+                <p class="settings-footer">AŞK BİR SİNYAL v1.0<br>sadece ikinize özel 💜</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SCREEN 8: LOCATION MAP ========== -->
+    <div id="screen-location" class="screen">
+        <div class="location-container">
+            <div class="location-screen-header">
+                <button class="btn-back" id="btn-back-location" onclick="showScreen('screen-main')">← Geri</button>
+                <h2>📍 Canlı Konum</h2>
+            </div>
+
+            <!-- My Location -->
+            <div class="location-info-card my-location-card">
+                <div class="location-info-row">
+                    <span class="location-dot my-dot"></span>
+                    <div class="location-info-text">
+                        <span class="location-info-name" id="my-location-name">Sen</span>
+                        <span class="location-info-address" id="my-location-address">Konum alınıyor...</span>
+                    </div>
+                    <span class="location-info-time" id="my-location-time">—</span>
+                </div>
+            </div>
+
+            <!-- Partner Location -->
+            <div class="location-info-card partner-location-card">
+                <div class="location-info-row">
+                    <span class="location-dot partner-dot"></span>
+                    <div class="location-info-text">
+                        <span class="location-info-name" id="partner-location-name">Sevgilin</span>
+                        <span class="location-info-address" id="partner-location-address">Konum bilgisi yok</span>
+                    </div>
+                    <span class="location-info-time" id="partner-location-time">—</span>
+                </div>
+            </div>
+
+            <!-- Map -->
+            <div id="location-map" class="location-map"></div>
+
+            <!-- Share Button -->
+            <button class="btn btn-primary btn-large btn-full" id="btn-share-location" onclick="shareMyLocation()">
+                📍 Konumumu Paylaş
+            </button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
