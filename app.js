@@ -11,6 +11,9 @@ const SUPABASE_KEY = 'sb_publishable_670xqQml4GvDnEdleJn2AQ_Q78pSOyb';
 
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+// VAPID Public Key for Push Notifications
+const VAPID_PUBLIC_KEY = 'BJ7CedQRQE4sAYdBxZZB7VUom7GWBArTtDhl7m9L8kQIWNLBGUma3ijbh_zDbEh3eFdWsVw03YaLN4dybyD_l3c';
+
 // ═══════════════════════════════════════
 // ─── SIGNAL DEFINITIONS ───
 // ═══════════════════════════════════════
@@ -73,8 +76,71 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 function registerServiceWorker() {
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        navigator.serviceWorker.register('/sw.js')
+            .then((reg) => {
+                console.log('SW registered');
+                // Try to subscribe to push after SW is ready
+                if (reg.active) subscribeToPush(reg);
+                reg.addEventListener('updatefound', () => {
+                    const newSW = reg.installing;
+                    newSW.addEventListener('statechange', () => {
+                        if (newSW.state === 'activated') subscribeToPush(reg);
+                    });
+                });
+            })
+            .catch((err) => console.warn('SW registration failed:', err));
     }
+}
+
+// ─── Push Subscription ───
+async function subscribeToPush(reg) {
+    try {
+        // Check if already subscribed
+        let sub = await reg.pushManager.getSubscription();
+        
+        if (!sub) {
+            // Request permission
+            const permission = await Notification.requestPermission();
+            if (permission !== 'granted') return;
+
+            // Subscribe
+            const vapidKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+            sub = await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: vapidKey,
+            });
+        }
+
+        // Save subscription to Supabase (if logged in)
+        if (currentProfile) {
+            await savePushSubscription(sub);
+        } else {
+            // Store temporarily, save after login
+            window._pendingPushSub = sub;
+        }
+    } catch (err) {
+        console.warn('Push subscription failed:', err);
+    }
+}
+
+async function savePushSubscription(sub) {
+    if (!currentProfile || !sub) return;
+    await db.from('push_subscriptions').upsert({
+        user_id: currentProfile.id,
+        subscription: sub.toJSON(),
+        updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+}
+
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
 }
 
 // ═══════════════════════════════════════
@@ -177,6 +243,12 @@ async function handleRegister(e) {
 
     await loadProfile(authData.user.id);
 
+    // Save pending push subscription
+    if (window._pendingPushSub) {
+        await savePushSubscription(window._pendingPushSub);
+        window._pendingPushSub = null;
+    }
+
     showToast('Hesabın oluşturuldu! 🎉');
     showScreen('screen-connect');
     e.target.reset();
@@ -203,6 +275,12 @@ async function handleLogin(e) {
     }
 
     await loadProfile(data.user.id);
+
+    // Save pending push subscription
+    if (window._pendingPushSub) {
+        await savePushSubscription(window._pendingPushSub);
+        window._pendingPushSub = null;
+    }
 
     if (!currentProfile) {
         showToast('Profil bulunamadı ❌');
@@ -414,6 +492,21 @@ async function sendSignal(type) {
     }
 
     showToast(`${signal.emoji} Mesajın gönderildi!`);
+
+    // Send push notification to partner (even if app is closed)
+    try {
+        await fetch('/api/send-push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                receiver_id: partnerProfile.id,
+                signal_type: type,
+                sender_name: currentProfile.name,
+            }),
+        });
+    } catch (e) {
+        // Push failed silently - signal was still sent via Supabase
+    }
 }
 
 // ═══════════════════════════════════════

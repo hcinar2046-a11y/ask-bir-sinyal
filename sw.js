@@ -1,11 +1,10 @@
-const CACHE_NAME = 'ask-bir-sinyal-v1';
+const CACHE_NAME = 'ask-bir-sinyal-v2';
 const ASSETS = [
   '/',
   '/index.html',
   '/styles.css',
   '/app.js',
   '/manifest.json',
-  'https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,600;0,700;1,600&display=swap',
 ];
 
 // Install - cache static assets
@@ -28,10 +27,10 @@ self.addEventListener('activate', (e) => {
 
 // Fetch - network first, fall back to cache
 self.addEventListener('fetch', (e) => {
-  // Skip non-GET and API/Supabase requests
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
   if (url.hostname.includes('supabase') || url.hostname.includes('nominatim')) return;
+  if (url.pathname.startsWith('/api/')) return;
 
   e.respondWith(
     fetch(e.request)
@@ -41,5 +40,55 @@ self.addEventListener('fetch', (e) => {
         return res;
       })
       .catch(() => caches.match(e.request))
+  );
+});
+
+// ─── PUSH NOTIFICATIONS ───
+self.addEventListener('push', (e) => {
+  let data = { title: 'Aşk Bir Sinyal', body: 'Yeni bir mesajın var! 💕' };
+
+  try {
+    if (e.data) data = e.data.json();
+  } catch (err) {}
+
+  const options = {
+    body: data.body,
+    icon: data.icon || '/icon-192-real.png',
+    badge: data.badge || '/icon-192-real.png',
+    vibrate: [200, 100, 200, 100, 200],
+    tag: 'ask-sinyal-' + Date.now(),
+    renotify: true,
+    requireInteraction: true,
+    data: data.data || { url: '/' },
+    actions: [
+      { action: 'open', title: '💕 Aç' },
+      { action: 'close', title: 'Kapat' },
+    ],
+  };
+
+  e.waitUntil(
+    self.registration.showNotification(data.title, options)
+  );
+});
+
+// Handle notification click
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+
+  if (e.action === 'close') return;
+
+  const url = e.notification.data?.url || '/';
+
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // Focus existing tab if open
+      for (const client of windowClients) {
+        if (client.url.includes('ask-bir-sinyal') && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise open new tab
+      return clients.openWindow(url);
+    })
   );
 });
